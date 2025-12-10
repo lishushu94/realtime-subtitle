@@ -10,18 +10,28 @@ A high-performance real-time speech-to-text and translation application built fo
 - **⚙️ Hot Reloading**: Change code or config and the app restarts automatically.
 - **💾 Transcript Saving**: One-click save of your session history.
 
+## Demo
+<video width="640" height="360" controls>
+  <!-- 本地文件路径或网络 URL -->
+  <source src="demo/demo%20screenshot.mp4" type="video/mp4">
+  您的浏览器不支持 video 标签。<a href="demo/demo%20screenshot.mp4">下载视频</a>
+</video>
+
 ## Installation
 
 1. **Prerequisites**:
    - Python 3.10+
    - macOS (recommended for `mlx-whisper` support)
    - `ffmpeg` installed (e.g., `brew install ffmpeg`)
+   - `BlackHole` installed (e.g., `brew install blackhole`)
+   - `BlackHole` Settings![BlackHole Settings](demo/how_to_set_blackhole.png)
 
 2. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
    *(Ensure you have `PyQt6`, `sounddevice`, `numpy`, `openai`, `watchdog` installed)*
+
 
 ## Usage
 
