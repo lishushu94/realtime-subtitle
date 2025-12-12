@@ -36,7 +36,7 @@ else
 fi
 
 # 5. Check System Dependencies
-echo "[4/4] Checking system tools..."
+echo "[4/5] Checking system tools..."
 MISSING_TOOLS=0
 
 if ! command -v ffmpeg &> /dev/null; then
@@ -50,6 +50,19 @@ fi
 if [ $MISSING_TOOLS -eq 1 ]; then
     echo ""
     echo "Please install the missing tools above manually."
+fi
+
+# 6. Virtual Audio Device
+echo "[5/5] Checking virtual audio device..."
+if [ -d "/Library/Audio/Plug-Ins/HAL/BlackHole2ch.driver" ] || [ -d "/Library/Audio/Plug-Ins/HAL/BlackHole2ch.driver" ]; then
+    echo "  [OK] BlackHole virtual audio device found."
+else
+    echo "  [WARNING] BlackHole virtual audio device is NOT installed."
+    echo "  -> BlackHole is required to capture system audio (e.g., from games, meetings, videos)."
+    echo "  -> Install via Homebrew: brew install blackhole-2ch"
+    echo "  -> Or download from: https://existential.audio/blackhole/"
+    echo "  -> After installation, configure in System Settings > Sound or Audio MIDI Setup."
+    echo ""
 fi
 
 echo ""

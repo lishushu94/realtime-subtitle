@@ -30,7 +30,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 
 :: Check FFmpeg (Optional check, hard to verify in bat easily without which, but we can warn)
-echo [3/3] Checking FFmpeg...
+echo [3/4] Checking FFmpeg...
 ffmpeg -version >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
@@ -40,6 +40,26 @@ if %errorlevel% neq 0 (
     echo.
 ) else (
     echo FFmpeg found.
+)
+
+:: Check Virtual Audio Device
+echo [4/4] Checking virtual audio device...
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s | findstr /C:"VB-Audio" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.
+    echo [WARNING] Virtual audio device is NOT installed.
+    echo VB-CABLE is required to capture system audio (e.g., from games, meetings, videos).
+    echo.
+    echo Please download and install VB-CABLE from:
+    echo   https://vb-audio.com/Cable/
+    echo.
+    echo After installation:
+    echo   1. Set VB-CABLE as your default playback device
+    echo   2. Configure your real speakers to listen to VB-CABLE
+    echo   3. Or use Voicemeeter for advanced audio routing
+    echo.
+) else (
+    echo Virtual audio device (VB-Audio) found.
 )
 
 echo.
