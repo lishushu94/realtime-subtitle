@@ -576,6 +576,7 @@ class Dashboard(QWidget):
             "iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
             "iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
             "iic/speech_paraformer_asr_nat-zh-cn-16k-common-vocab8404-online",
+            "iic/speech_UniASR_asr_2pass-vi-16k-common-vocab1001-pytorch-online",
             "iic/speech_UniASR_asr_2pass-en-16k-common-vocab1080-tensorflow1-online",
             "iic/SenseVoiceSmall",
             "FunAudioLLM/SenseVoiceSmall",
@@ -595,11 +596,13 @@ class Dashboard(QWidget):
         self.device_type = QComboBox()
         self.device_type.addItems(["cpu", "cuda", "mps", "auto"])
         self.device_type.setCurrentText(config.whisper_device)
+        self.device_type.currentTextChanged.connect(self._on_device_changed)
         layout.addRow("Compute Device:", self.device_type)
         
         self.compute_type = QComboBox()
         self.compute_type.addItems(["int8", "float16", "float32"])
         self.compute_type.setCurrentText(config.whisper_compute_type)
+        self.compute_type.currentTextChanged.connect(self._on_quantization_changed)
         layout.addRow("Quantization:", self.compute_type)
         
         # Source Language Configuration
@@ -617,7 +620,7 @@ class Dashboard(QWidget):
         self.tabs.addTab(tab, "📝 Transcription")
     
     def _on_backend_changed(self, backend):
-        """Show/hide model selectors based on backend"""
+        """Show/hide model selectors based on backend and warn about device compatibility"""
         is_whisper_or_mlx = backend in ["whisper", "mlx"]
         is_funasr = backend == "funasr"
         
@@ -632,6 +635,49 @@ class Dashboard(QWidget):
         else:
             self.whisper_model.setStyleSheet("color: #6c7086;")
             self.funasr_model.setStyleSheet("")
+        
+        # Check MPS + FunASR quantization compatibility
+        if is_funasr:
+            self._check_funasr_mps_compatibility()
+    
+    def _check_funasr_mps_compatibility(self):
+        """Check if MPS device is used with FunASR and enforce float32"""
+        current_device = self.device_type.currentText()
+        current_quantization = self.compute_type.currentText()
+        
+        if current_device == "mps" and current_quantization != "float32":
+            self._show_mps_float32_warning()
+            # Auto-switch to float32
+            float32_index = self.compute_type.findText("float32")
+            if float32_index >= 0:
+                self.compute_type.setCurrentIndex(float32_index)
+    
+    def _show_mps_float32_warning(self):
+        """Show warning about MPS requiring float32 with FunASR"""
+        from PyQt6.QtWidgets import QMessageBox
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Quantization Compatibility")
+        msg.setText("MPS device requires float32 quantization with FunASR")
+        msg.setInformativeText(
+            "Apple's MPS (Metal Performance Shaders) does not support float64 operations.\n\n"
+            "When using FunASR with MPS device, quantization must be set to 'float32'.\n\n"
+            "The quantization has been automatically switched to float32."
+        )
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
+    
+    def _on_device_changed(self, device):
+        """Check device compatibility when user changes device selection"""
+        # Check MPS + FunASR quantization compatibility
+        if self.asr_backend.currentText() == "funasr":
+            self._check_funasr_mps_compatibility()
+    
+    def _on_quantization_changed(self, quantization):
+        """Check quantization compatibility when user changes quantization"""
+        # Check MPS + FunASR quantization compatibility
+        if self.asr_backend.currentText() == "funasr":
+            self._check_funasr_mps_compatibility()
 
     def init_translation_tab(self):
         tab = QWidget()
