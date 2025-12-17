@@ -3,7 +3,8 @@
 A high-performance real-time speech-to-text and translation application built for macOS (Apple Silicon optimized).
 
 ## Features
-- **⚡️ Real-Time Transcription**: Instant streaming display using `faster-whisper` (or `mlx-whisper`).
+- **⚡️ Real-Time Transcription**: Instant streaming display using `faster-whisper`, `mlx-whisper`, or `FunASR`.
+- **🎯 Multiple ASR Backends**: Choose between Whisper (multilingual), MLX (Apple Silicon optimized), or FunASR (industrial-grade Chinese/English).
 - **🌊 Word-by-Word Streaming**: See text appear as you speak, with smart context accumulation.
 - **🔄 Async Translation**: Translates text to Chinese (or target language) in the background without blocking the UI.
 - **🖥️ Overlay UI**: Always-on-top, transparent, click-through window for seamless usage during meetings/videos.
@@ -97,7 +98,9 @@ Settings are managed via the Dashboard, but stored in `config.ini`.
 #### `[transcription]` Section
 | Parameter | Description | Details |
 | :--- | :--- | :--- |
-| `whisper_model` | Model Size | `tiny` (fast), `large-v3` (accurate) |
+| `backend` | ASR Engine | `whisper` (default), `mlx` (Apple Silicon), `funasr` (Alibaba) |
+| `whisper_model` | Whisper Model Size | `tiny` (fast), `large-v3` (accurate) |
+| `funasr_model` | FunASR Model Name | `paraformer-zh` (Chinese), `SenseVoiceSmall` (Multi-lang) |
 | `device` | Compute Unit | `auto` (Apple Neural Engine), `cuda` (NVIDIA) |
 
 #### `[audio]` Section
@@ -110,6 +113,24 @@ Settings are managed via the Dashboard, but stored in `config.ini`.
 - **No Audio?** Check the terminal for "Audio Capture" logs. If using BlackHole, ensure it's selected in `config.ini` or auto-detected.
 - **Resize not working?** Use the designated "◢" handle in the bottom-right.
 - **Hot Reload**: Modify any `.py` file or save settings in the UI to trigger a reload.
+
+## 🎯 Using FunASR (NEW!)
+
+FunASR is Alibaba's industrial-grade ASR toolkit with excellent Chinese language support.
+
+**Quick Start:**
+1. Set backend to `funasr` in Settings or `config.ini`
+2. Choose a FunASR model (e.g., `iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch` for Chinese)
+3. Models auto-download on first use from ModelScope
+
+**Recommended Models:**
+- **Chinese (Offline)**: `iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch`
+- **Chinese (Streaming)**: `iic/speech_paraformer_asr_nat-zh-cn-16k-common-vocab8404-online`
+- **English (Streaming)**: `iic/speech_UniASR_asr_2pass-en-16k-common-vocab1080-tensorflow1-online`
+- **Multi-language**: `iic/SenseVoiceSmall` or `FunAudioLLM/SenseVoiceSmall`
+- **Latest 31-language model**: `FunAudioLLM/Fun-ASR-Nano-2512` (Supports dialects, accents, lyrics)
+
+**Note**: FunASR model names must include the namespace (e.g., `iic/` or `FunAudioLLM/`)
 
 
 ## License: MIT

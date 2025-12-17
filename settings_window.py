@@ -61,11 +61,35 @@ class SettingsWindow(QWidget):
         self.threads_input.setToolTip("Number of concurrent translation requests (Increase for fast speakers)")
         form_layout.addRow("Translate Threads:", self.threads_input)
         
+        # ASR Backend Selection
+        self.backend_input = QComboBox()
+        self.backend_input.addItems(["whisper", "mlx", "funasr"])
+        self.backend_input.setCurrentText(config.asr_backend)
+        self.backend_input.setToolTip("ASR Backend: whisper (CPU/CUDA), mlx (Apple Silicon), funasr (Alibaba FunASR)")
+        form_layout.addRow("ASR Backend:", self.backend_input)
+        
         # Whisper Model
         self.whisper_input = QComboBox()
-        self.whisper_input.addItems(["tiny", "base", "small", "medium", "large", "turbo"])
+        self.whisper_input.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", "medium", "medium.en", "large-v3", "turbo"])
         self.whisper_input.setCurrentText(config.whisper_model)
         form_layout.addRow("Whisper Model:", self.whisper_input)
+        
+        # FunASR Model
+        self.funasr_input = QComboBox()
+        self.funasr_input.setEditable(True)
+        self.funasr_input.addItems([
+            "iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+            "iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+            "iic/speech_paraformer_asr_nat-zh-cn-16k-common-vocab8404-online",
+            "iic/speech_UniASR_asr_2pass-en-16k-common-vocab1080-tensorflow1-online",
+            "iic/SenseVoiceSmall",
+            "FunAudioLLM/SenseVoiceSmall",
+            "FunAudioLLM/Fun-ASR-Nano-2512",
+            "iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+        ])
+        self.funasr_input.setCurrentText(config.funasr_model)
+        self.funasr_input.setToolTip("FunASR model name (only used when backend=funasr)")
+        form_layout.addRow("FunASR Model:", self.funasr_input)
         
         # Streaming Step Size (Latency vs CPU)
         self.step_size_input = QDoubleSpinBox()
@@ -181,7 +205,9 @@ class SettingsWindow(QWidget):
         parser.set("api", "base_url", self.base_url_input.text() or "")
         parser.set("translation", "model", self.model_input.currentText())
         parser.set("translation", "threads", str(self.threads_input.value()))
+        parser.set("transcription", "backend", self.backend_input.currentText())
         parser.set("transcription", "whisper_model", self.whisper_input.currentText())
+        parser.set("transcription", "funasr_model", self.funasr_input.currentText())
         parser.set("audio", "streaming_step_size", str(self.step_size_input.value()))
         parser.set("audio", "max_phrase_duration", str(self.max_phrase_input.value()))
         parser.set("audio", "silence_duration", str(self.silence_dur_input.value()))

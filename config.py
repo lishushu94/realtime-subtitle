@@ -28,7 +28,9 @@ class Config:
         self.translation_threads = self._getint("translation", "threads", 4)
         
         # Transcription settings
+        self.asr_backend = self._get("transcription", "backend", "whisper").lower()
         self.whisper_model = self._get("transcription", "whisper_model", "base")
+        self.funasr_model = self._get("transcription", "funasr_model", "iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch")
         self.whisper_device = self._get("transcription", "device", "cpu")
         self.whisper_compute_type = self._get("transcription", "compute_type", "int8")
         self.source_language = self._get("transcription", "source_language", "auto")
@@ -107,7 +109,9 @@ class Config:
         print(f"  API Key: {self.api_key[:8]}...{self.api_key[-4:] if len(self.api_key) > 12 else '***'}")
         print(f"  Model: {self.model}")
         print(f"  Target Language: {self.target_lang}")
+        print(f"  ASR Backend: {self.asr_backend}")
         print(f"  Whisper Model: {self.whisper_model}")
+        print(f"  FunASR Model: {self.funasr_model}")
         print(f"  Sample Rate: {self.sample_rate}")
 
 # Global config instance

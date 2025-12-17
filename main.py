@@ -43,9 +43,17 @@ class Pipeline(QObject):
         )
         
         # Initialize Transcriber
-        print(f"[Pipeline] Initializing Transcriber with device={config.whisper_device}...")
+        print(f"[Pipeline] Initializing Transcriber with backend={config.asr_backend}, device={config.whisper_device}...")
+        
+        # Determine model size based on backend
+        if config.asr_backend == "funasr":
+            model_size = config.funasr_model
+        else:
+            model_size = config.whisper_model
+            
         self.transcriber = Transcriber(
-            model_size=config.whisper_model,
+            backend=config.asr_backend,
+            model_size=model_size,
             device=config.whisper_device,
             compute_type=config.whisper_compute_type,
             language=config.source_language
@@ -84,7 +92,7 @@ class Pipeline(QObject):
         
         # Create multiple transcribers for concurrent processing
         # CHECK: If using MLX, force 1 worker (MLX is not thread-safe for parallel inference in this way)
-        is_mlx = getattr(self.transcriber, 'use_mlx', False)
+        is_mlx = (config.asr_backend == "mlx")
         
         if is_mlx:
             print("[Pipeline] MLX backend detected - forcing single worker (MLX uses GPU parallelism internaly)")
@@ -94,10 +102,17 @@ class Pipeline(QObject):
             
         print(f"[Pipeline] Using {num_transcription_workers} transcription workers...")
         
+        # Determine model size based on backend
+        if config.asr_backend == "funasr":
+            model_size = config.funasr_model
+        else:
+            model_size = config.whisper_model
+        
         transcribers = [self.transcriber]  # Reuse existing one
         for i in range(num_transcription_workers - 1):
             t = Transcriber(
-                model_size=config.whisper_model,
+                backend=config.asr_backend,
+                model_size=model_size,
                 device=config.whisper_device,
                 compute_type=config.whisper_compute_type,
                 language=config.source_language

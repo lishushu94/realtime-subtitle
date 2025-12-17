@@ -551,10 +551,46 @@ class Dashboard(QWidget):
         tab = QWidget()
         layout = QFormLayout()
         
+        # ASR Backend Selection
+        self.asr_backend = QComboBox()
+        self.asr_backend.addItems(["whisper", "mlx", "funasr"])
+        self.asr_backend.setCurrentText(config.asr_backend)
+        self.asr_backend.setToolTip(
+            "whisper: CPU/CUDA (faster-whisper)\n"
+            "mlx: Apple Silicon GPU (mlx-whisper)\n"
+            "funasr: Alibaba ASR (excellent for Chinese)"
+        )
+        self.asr_backend.currentTextChanged.connect(self._on_backend_changed)
+        layout.addRow("ASR Backend:", self.asr_backend)
+        
+        # Whisper Model
         self.whisper_model = QComboBox()
-        self.whisper_model.addItems(["tiny", "base", "small", "medium", "large-v3", "turbo"])
+        self.whisper_model.addItems(["tiny", "tiny.en", "base", "base.en", "small", "small.en", "medium", "medium.en", "large-v3", "turbo"])
         self.whisper_model.setCurrentText(config.whisper_model)
         layout.addRow("Whisper Model:", self.whisper_model)
+        
+        # FunASR Model
+        self.funasr_model = QComboBox()
+        self.funasr_model.setEditable(True)
+        self.funasr_model.addItems([
+            "iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+            "iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+            "iic/speech_paraformer_asr_nat-zh-cn-16k-common-vocab8404-online",
+            "iic/speech_UniASR_asr_2pass-en-16k-common-vocab1080-tensorflow1-online",
+            "iic/SenseVoiceSmall",
+            "FunAudioLLM/SenseVoiceSmall",
+            "FunAudioLLM/Fun-ASR-Nano-2512",
+            "iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+        ])
+        self.funasr_model.setCurrentText(config.funasr_model)
+        self.funasr_model.setToolTip(
+            "Chinese (Offline): iic/speech_paraformer-large...\n"
+            "Chinese (Streaming): iic/speech_paraformer_asr_nat...online\n"
+            "English (Streaming): iic/speech_UniASR_asr_2pass-en...\n"
+            "Multi-language: iic/SenseVoiceSmall\n"
+            "Latest 31-lang model: FunAudioLLM/Fun-ASR-Nano-2512"
+        )
+        layout.addRow("FunASR Model:", self.funasr_model)
         
         self.device_type = QComboBox()
         self.device_type.addItems(["cpu", "cuda", "mps", "auto"])
@@ -574,8 +610,28 @@ class Dashboard(QWidget):
         self.source_language.setCurrentText(source_lang)
         layout.addRow("Source Language:", self.source_language)
         
+        # Update UI based on initial backend
+        self._on_backend_changed(config.asr_backend)
+        
         tab.setLayout(layout)
         self.tabs.addTab(tab, "📝 Transcription")
+    
+    def _on_backend_changed(self, backend):
+        """Show/hide model selectors based on backend"""
+        is_whisper_or_mlx = backend in ["whisper", "mlx"]
+        is_funasr = backend == "funasr"
+        
+        # Enable/disable appropriate widgets
+        self.whisper_model.setEnabled(is_whisper_or_mlx)
+        self.funasr_model.setEnabled(is_funasr)
+        
+        # Visual feedback - dim disabled widgets
+        if is_whisper_or_mlx:
+            self.whisper_model.setStyleSheet("")
+            self.funasr_model.setStyleSheet("color: #6c7086;")
+        else:
+            self.whisper_model.setStyleSheet("color: #6c7086;")
+            self.funasr_model.setStyleSheet("")
 
     def init_translation_tab(self):
         tab = QWidget()
@@ -657,7 +713,9 @@ class Dashboard(QWidget):
         cp.set("audio", "silence_duration", str(self.silence_dur.value()))
         
         # Transcription
+        cp.set("transcription", "backend", self.asr_backend.currentText())
         cp.set("transcription", "whisper_model", self.whisper_model.currentText())
+        cp.set("transcription", "funasr_model", self.funasr_model.currentText())
         cp.set("transcription", "device", self.device_type.currentText())
         cp.set("transcription", "compute_type", self.compute_type.currentText())
         cp.set("transcription", "source_language", self.source_language.currentText())

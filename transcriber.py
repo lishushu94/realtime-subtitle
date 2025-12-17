@@ -1,26 +1,73 @@
 import numpy as np
 
 class Transcriber:
-    def __init__(self, model_size, device, compute_type, language=None):
-        self.language = language
-        self.use_mlx = False
-        self.model_size = model_size
+    def __init__(self, backend="whisper", model_size="base", device="cpu", compute_type="int8", language=None):
+        """
+        Initialize Transcriber with multiple backend support
         
+        Args:
+            backend: ASR backend to use - 'whisper', 'mlx', or 'funasr'
+            model_size: Model identifier (for Whisper: tiny/base/small/medium/large/turbo, for FunASR: model name)
+            device: Device to use (cpu/cuda/auto)
+            compute_type: Compute type for faster-whisper (int8/float16/float32)
+            language: Source language code or None for auto-detect
+        """
+        self.backend = backend.lower()
+        self.language = language
+        self.model_size = model_size
+        self.model = None
+        
+        if self.backend == "funasr":
+            self._init_funasr(model_size)
+        elif self.backend == "mlx":
+            self._init_mlx(model_size)
+        else:  # default to whisper
+            self._init_whisper(model_size, device, compute_type)
+
+    def _init_whisper(self, model_size, device, compute_type):
+        """Initialize faster-whisper backend"""
+        from faster_whisper import WhisperModel
+        self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        print(f"[Transcriber] Using faster-whisper (CPU/CUDA) with model: {model_size}")
+    
+    def _init_mlx(self, model_size):
+        """Initialize MLX Whisper backend (Apple Silicon)"""
         try:
             import mlx_whisper
-            self.use_mlx = True
+            # MLX doesn't need explicit model loading here
             print(f"[Transcriber] Using MLX Whisper (Metal Acceleration) with model: {model_size}")
         except ImportError:
-            from faster_whisper import WhisperModel
-            self.model = WhisperModel(model_size, device=device, compute_type=compute_type)
-            print(f"[Transcriber] Using faster-whisper (CPU/CUDA) with model: {model_size}")
-
-    def transcribe(self, audio_data, prompt=None):
-        if self.use_mlx:
-            text = self._transcribe_mlx(audio_data, prompt)
-        else:
-            text = self._transcribe_faster_whisper(audio_data, prompt)
+            print("[Transcriber] Warning: mlx_whisper not available, falling back to faster-whisper")
+            self.backend = "whisper"
+            self._init_whisper(model_size, "cpu", "int8")
+    
+    def _init_funasr(self, model_size):
+        """Initialize FunASR backend"""
+        try:
+            from funasr import AutoModel
+            print(f"[Transcriber] Initializing FunASR with model: {model_size}")
             
+            # Initialize FunASR model
+            # Common models: paraformer-zh, paraformer-zh-streaming, SenseVoiceSmall, Fun-ASR-Nano
+            self.model = AutoModel(
+                model=model_size,
+                disable_pbar=True,
+                disable_log=False
+            )
+            print(f"[Transcriber] FunASR model loaded successfully")
+        except Exception as e:
+            print(f"[Transcriber] Error loading FunASR model: {e}")
+            print("[Transcriber] Falling back to faster-whisper")
+            self.backend = "whisper"
+            self._init_whisper("base", "cpu", "int8")
+    def transcribe(self, audio_data, prompt=None):
+        """Transcribe audio using the configured backend"""
+        if self.backend == "funasr":
+            text = self._transcribe_funasr(audio_data, prompt)
+        elif self.backend == "mlx":
+            text = self._transcribe_mlx(audio_data, prompt)
+        else:  # whisper
+            text = self._transcribe_faster_whisper(audio_data, prompt)
             
         # Filter hallucinations (infinite loops, e.g. "once once once")
         if self._is_hallucination(text):
@@ -106,6 +153,43 @@ class Transcriber:
             return True
             
         return False
+
+    def _transcribe_funasr(self, audio_data, prompt=None):
+        """Transcribe using FunASR backend"""
+        try:
+            # FunASR expects audio data in specific format
+            # Convert numpy array to the format FunASR expects
+            # Most FunASR models expect 16kHz audio
+            
+            # Ensure audio is in the right shape and format
+            if len(audio_data.shape) > 1:
+                audio_data = audio_data.flatten()
+            
+            # FunASR AutoModel.generate() accepts audio directly
+            result = self.model.generate(
+                input=audio_data,
+                batch_size_s=300,  # Process in batches
+                hotword="" if not prompt else prompt
+            )
+            
+            # Extract text from result
+            if isinstance(result, list) and len(result) > 0:
+                # FunASR returns a list of results
+                text_parts = []
+                for item in result:
+                    if isinstance(item, dict) and 'text' in item:
+                        text_parts.append(item['text'])
+                    elif isinstance(item, str):
+                        text_parts.append(item)
+                return " ".join(text_parts).strip()
+            elif isinstance(result, dict) and 'text' in result:
+                return result['text'].strip()
+            else:
+                return ""
+                
+        except Exception as e:
+            print(f"[Transcriber] FunASR Error: {e}")
+            return ""
 
     def _transcribe_mlx(self, audio_data, prompt=None):
         import mlx_whisper
