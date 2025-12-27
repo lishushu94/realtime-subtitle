@@ -12,7 +12,7 @@ A high-performance real-time speech-to-text and translation application built fo
 - **💾 Transcript Saving**: One-click save of your session history. Can be used as subtitle or LLM analyze.
 
 ## Demo
-https://github.com/Vanyoo/realtime-subtitle/raw/refs/heads/master/demo/demo%20screenshot.mp4
+https://github.com/user-attachments/assets/9982fe5d-3937-42d5-bcfc-e23748c01edf
 
 ![Dashboard](./demo/main_dashboard.png)
 
